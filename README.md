@@ -1,43 +1,65 @@
-# X Region Blocker
+# XjeetBlocker
 
-A personal Chrome extension for x.com that:
+A Chrome extension that lets you purge entire regions from your X timeline with extreme prejudice.
 
-- shows a **Region Badge** (🇮🇳 India, 🌐 South Asia, ? unknown, ⚠ possibly inaccurate) beside every account as you scroll;
-- adds a one-click **Hand Block** (🚫, with a 5-second Undo) and **Never block** (🛡) to every post and profile;
-- automatically Blocks accounts matching your **Region Rules** (starts with India, Pakistan and Nigeria), skipping accounts you follow, accounts marked Never block, accounts you unblocked, and regions X flags as possibly inaccurate;
-- keeps a **Block Log** in the popup with Unblock per entry and "Undo all from this rule".
+Built primarily for the majority of the clean world who are sick of the endless spam, scams, and low-effort sludge pouring out of **India, Nigeria, and Pakistan**.  
+But it works just as well if you’re English and want to soft-genocide the French, a Serb who never wants to see another Bosnian, a Hutu tired of Zulus, or any other group that has worn out its welcome on your feed.
+
+## What the fuck it does
+
+- Stamps a big fat region badge next to every account so you can immediately see where the shit is coming from (🇮🇳 India, 🌐 South Asia, ❓ unknown, ⚠ “X is probably lying”)
+- One-click **Hand Block** (🚫) with a 5-second undo window
+- **Never block** (🛡) button for the rare accounts you actually want to keep
+- Auto-blocks entire regions according to your rules  
+  (defaults: India, Pakistan, Nigeria — the current global champions of timeline pollution)
+- Skips people you follow, people you marked “never block”, people you already unblocked, and accounts X flags as “maybe we pulled this region out of our ass”
+- Keeps a Block Log in the popup so you can admire the body count and mass-unblock if you ever get soft
+
+The region rules are fully configurable. Point it at whoever is currently ruining your experience.
 
 Terms are defined in [GLOSSARY.md](GLOSSARY.md).
 
-## Install
+## Install (Noob-Friendly Version)
 
-### From a release (no build needed)
+### Option 1: From a Release (Easiest – Recommended for most people)
 
-1. Download `x-region-blocker.zip` from the [latest release](../../releases/latest) and unzip it.
-2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and choose the unzipped folder.
+#### Windows
 
-### From source
+1. Go to the [Releases page](../../releases/latest) on this GitHub repo.
+2. Download the file called `x-region-blocker.zip`.
+3. Right-click the zip file → **Extract All…** → extract it somewhere easy (like your Desktop).
+4. Open Google Chrome.
+5. In the address bar type: `chrome://extensions` and press Enter.
+6. Turn **on** the switch that says **Developer mode** (top right).
+7. Click the **Load unpacked** button.
+8. Select the folder you just extracted (the one that contains files like `manifest.json`).
+9. Done. Go to x.com and the badges + block buttons should appear.
+
+#### Mac
+
+1. Go to the [Releases page](../../releases/latest) on this GitHub repo.
+2. Download the file called `x-region-blocker.zip`.
+3. Double-click the zip file to extract it (it will create a folder).
+4. Open Google Chrome.
+5. In the address bar type: `chrome://extensions` and press Enter.
+6. Turn **on** the switch that says **Developer mode** (top right).
+7. Click the **Load unpacked** button.
+8. Select the folder you just extracted (the one that contains files like `manifest.json`).
+9. Done. Go to x.com and the badges + block buttons should appear.
+
+---
+
+### Option 2: Build from Source (Only if you know what a terminal is)
+
+#### Windows
+
+1. Install [Node.js](https://nodejs.org/) (just download the LTS version and click Next a bunch of times).
+2. Open **Command Prompt** or **PowerShell**.
+3. Type these commands one by one and press Enter after each:
 
 ```bash
+git clone https://github.com/jeetdelete/XjeetBlocker.git
+cd XjeetBlocker
 npm install
 npm run build
 ```
-
-Then in Chrome: open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, and choose the `dist` folder. After rebuilding, click the reload icon on the extension's card.
-
-## Things to know
-
-- **Lookups are slow on purpose.** X allows roughly 50 region lookups per 15 minutes (unofficial figure). Lookups go one at a time, on-screen accounts first, and pause when X's allowance runs low. Every region is cached permanently in Chrome storage (including "no region"), and a cached account is never looked up again, however often it appears. To force a fresh lookup, remove and reinstall the extension, which clears its cache. The cache is per Chrome profile, so badges get faster the more you use it. While the limit is reached, waiting badges show ⏳ with the time lookups resume.
-- **Rule blocks are uncapped.** A broad rule on a busy feed can block many accounts quickly, which X may treat as automation (silently dropped blocks, logouts, locks).
-- **Rule changes apply going forward.** Accounts already on screen are not re-checked; reload the page to apply a new rule to them.
-- **Unblocking from the popup** needs an x.com tab open, because it uses that tab's signed-in session.
-- **X's private API is undocumented** and changes. The parts most likely to break are in `src/content/xApi.ts`: the `AboutAccountQuery` lookup (its query id is read from X's scripts, with a fallback), the accuracy flag field, `friendships/show` for "do I follow them", and `blocks/create` / `blocks/destroy`.
-
-## Development
-
-```bash
-npm test
-npm run typecheck
-```
-
-Tests drive the page code against a fake X (`test/fakes.ts`) and in-memory storage.
