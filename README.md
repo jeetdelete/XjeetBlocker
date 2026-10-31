@@ -37,7 +37,7 @@ another_account,,South Asia
 
 `region` contains X's reported **Account based in** value, which may be a country or a broad region. `country` is the recognized country name when available. Known X lookup results take precedence on export; otherwise saved list or log metadata is used. Imported location fields are unverified metadata and never replace X's lookup cache. A listed handle matches the rule regardless of its location, including an unknown or inaccurate region.
 
-Files must be smaller than 5 MB and contain at most 10,000 account rows. Handles may start with `@`. To prevent spreadsheet formulas from running, potentially executable location cells are exported with a leading apostrophe.
+There is no extension-imposed file-size or account-count limit on CSV imports. Handles may start with `@`. To prevent spreadsheet formulas from running, potentially executable location cells are exported with a leading apostrophe.
 
 ## Is it secure?
 

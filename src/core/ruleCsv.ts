@@ -39,7 +39,6 @@ export function parseRuleCsv(text: string): RuleAccount[] {
     throw new Error("Use a CSV with the columns: handle,country,region.");
   }
   if (!rows.length) throw new Error("The CSV contains no accounts.");
-  if (rows.length > 10000) throw new Error("Import at most 10,000 accounts at a time.");
   const accounts = new Map<string, RuleAccount>();
   for (const [i, row] of rows.entries()) {
     if (row.length !== columns.length) throw new Error(`CSV record ${i + 2} has the wrong number of fields.`);

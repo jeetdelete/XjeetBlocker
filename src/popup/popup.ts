@@ -70,7 +70,6 @@ function importList(ruleId: string) {
     try {
       const file = input.files?.[0];
       if (!file) return;
-      if (file.size >= 5 * 1024 * 1024) throw new Error("Choose a CSV smaller than 5 MB.");
       const incoming = parseRuleCsv(await file.text());
       const rules = await settings.rules();
       const rule = rules.find((r) => r.id === ruleId);
