@@ -1,5 +1,11 @@
 import { countryFromBasedIn } from "./countries";
 
+export interface RuleAccount {
+  handle: string;
+  country: string;
+  region: string;
+}
+
 export interface RegionRule {
   id: string;
   name: string;
@@ -8,6 +14,8 @@ export interface RegionRule {
   countries: string[];
   /** Broad Region names exactly as X shows them, e.g. "South Asia". */
   broadRegions: string[];
+  /** Explicit accounts imported by the user; location fields are unverified CSV metadata. */
+  accounts?: RuleAccount[];
 }
 
 export interface RegionInfo {
@@ -123,19 +131,18 @@ export class Settings {
   }
 }
 
-/** The first enabled rule the region falls under, or null. Ignores accuracy and Pause. */
-export function matchingRule(rules: RegionRule[], basedIn: string | null): RegionRule | null {
-  if (!basedIn) return null;
-  const country = countryFromBasedIn(basedIn);
-  const broad = basedIn.trim().toLowerCase();
+/** The first enabled rule matching the region or an explicitly listed handle. Ignores accuracy and Pause. */
+export function matchingRule(rules: RegionRule[], basedIn: string | null, handle?: string): RegionRule | null {
+  const country = countryFromBasedIn(basedIn ?? "");
+  const broad = basedIn?.trim().toLowerCase();
   return (
-    rules.find(
-      (r) =>
-        r.enabled &&
-        (country
-          ? r.countries.includes(country.code)
-          : r.broadRegions.some((b) => b.toLowerCase() === broad)),
-    ) ?? null
+    rules.find((rule) => {
+      if (!rule.enabled) return false;
+      if (handle && rule.accounts?.some((a) => handleKey(a.handle) === handleKey(handle))) return true;
+      return country
+        ? rule.countries.includes(country.code)
+        : rule.broadRegions.some((b) => b.toLowerCase() === broad);
+    }) ?? null
   );
 }
 

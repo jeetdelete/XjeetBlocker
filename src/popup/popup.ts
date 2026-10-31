@@ -1,5 +1,6 @@
 import { CONTINENTS, countryByCode, countryFromBasedIn, flagOf, KNOWN_BROAD_REGIONS } from "../core/countries";
 import { chromeStore, Settings, type BlockLogEntry, type RegionRule } from "../core/settings";
+import { exportRuleCsv, mergeRuleAccounts, parseRuleCsv } from "../core/ruleCsv";
 
 const settings = new Settings(chromeStore());
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -37,7 +38,55 @@ function describe(rule: RegionRule) {
 }
 
 function reasonText(e: BlockLogEntry) {
-  return e.reason.kind === "hand" ? "by hand" : `${e.reason.ruleName} rule · ${e.reason.basedIn}`;
+  return e.reason.kind === "hand" ? "by hand" : `${e.reason.ruleName} rule · ${e.reason.basedIn || "Imported account list"}`;
+}
+
+function listStatus(message: string) {
+  $("list-status").textContent = message;
+}
+
+async function exportList(ruleId: string) {
+  try {
+    const [rules, log, regions] = await Promise.all([settings.rules(), settings.log(), settings.regions()]);
+    const rule = rules.find((r) => r.id === ruleId);
+    if (!rule) throw new Error("This rule no longer exists.");
+    const url = URL.createObjectURL(new Blob([exportRuleCsv(rule, log, regions)], { type: "text/csv;charset=utf-8" }));
+    const link = el("a", { href: url, download: `${rule.name.replace(/[^a-z0-9_-]+/gi, "-") || "rule"}-accounts.csv` });
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    listStatus(`Exported ${rule.name}.`);
+  } catch (error) {
+    listStatus(error instanceof Error ? error.message : "Could not export this list.");
+  }
+}
+
+function importList(ruleId: string) {
+  const input = el("input", { type: "file", accept: ".csv,text/csv", hidden: true });
+  document.body.append(input);
+  input.oncancel = () => input.remove();
+  input.onchange = async () => {
+    try {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size >= 5 * 1024 * 1024) throw new Error("Choose a CSV smaller than 5 MB.");
+      const incoming = parseRuleCsv(await file.text());
+      const rules = await settings.rules();
+      const rule = rules.find((r) => r.id === ruleId);
+      if (!rule) throw new Error("This rule no longer exists.");
+      if (!confirm(`Add ${incoming.length} accounts to ${rule.name}? Enabled rules block listed accounts as they appear on X, regardless of their region. Your exemptions still apply.`)) return;
+      rule.accounts = mergeRuleAccounts(rule.accounts ?? [], incoming);
+      await settings.saveRules(rules);
+      await render();
+      listStatus(`Loaded ${incoming.length} accounts into ${rule.name}; ${rule.accounts.length} listed in total. Reload open X pages to apply.`);
+    } catch (error) {
+      listStatus(error instanceof Error ? error.message : "Could not import this list.");
+    } finally {
+      input.remove();
+    }
+  };
+  input.click();
 }
 
 async function render() {
@@ -56,24 +105,41 @@ async function render() {
     ...rules.map((rule) => {
       const toggle = el("input", { type: "checkbox", checked: rule.enabled, title: "Rule on/off" });
       toggle.onchange = async () => {
-        rule.enabled = toggle.checked;
-        await settings.saveRules(rules);
+        const latest = await settings.rules();
+        const current = latest.find((r) => r.id === rule.id);
+        if (current) current.enabled = toggle.checked;
+        await settings.saveRules(latest);
       };
       const del = el("button", { className: "danger", textContent: "Delete" });
       del.onclick = async () => {
         if (!confirm(`Delete the ${rule.name} rule? Accounts it already blocked stay blocked.`)) return;
-        await settings.saveRules(rules.filter((r) => r !== rule));
+        await settings.saveRules((await settings.rules()).filter((r) => r.id !== rule.id));
         await render();
       };
       const edit = el("button", { textContent: "Edit" });
       edit.onclick = () => openEditor(rule);
+      const exportBtn = el("button", { textContent: "Export CSV", title: `Export accounts for ${rule.name}` });
+      exportBtn.onclick = () => exportList(rule.id);
+      const importBtn = el("button", { textContent: "Import CSV", title: `Load accounts into ${rule.name}` });
+      importBtn.onclick = () => importList(rule.id);
+      const clearBtn = el("button", { textContent: "Clear list", hidden: !rule.accounts?.length });
+      clearBtn.onclick = async () => {
+        if (!confirm(`Remove the imported account list from ${rule.name}? Existing blocks and country selections stay unchanged.`)) return;
+        const latest = await settings.rules();
+        const current = latest.find((r) => r.id === rule.id);
+        if (current) current.accounts = [];
+        await settings.saveRules(latest);
+        await render();
+        listStatus(`Cleared the imported list for ${rule.name}. Reload open X pages to apply.`);
+      };
       return el(
         "div",
-        { className: "row" },
-        toggle,
-        el("div", { className: "grow" }, el("strong", {}, rule.name), el("div", { className: "muted" }, describe(rule))),
-        edit,
-        del,
+        { className: "rule-card" },
+        el("div", { className: "row" }, toggle,
+          el("div", { className: "grow" }, el("strong", {}, rule.name), el("div", { className: "muted" }, describe(rule))),
+          edit, del),
+        el("div", { className: "row list-actions" }, exportBtn, importBtn,
+          el("span", { className: "muted", textContent: `${rule.accounts?.length ?? 0} listed` }), clearBtn),
       );
     }),
   );
@@ -187,6 +253,7 @@ async function openEditor(existing?: RegionRule) {
     rule.broadRegions = [...broadChosen];
     const rules = await settings.rules();
     const i = rules.findIndex((r) => r.id === rule.id);
+    if (i !== -1) rule.accounts = rules[i].accounts;
     i === -1 ? rules.push(rule) : (rules[i] = rule);
     await settings.saveRules(rules);
     closeEditor();

@@ -16,6 +16,9 @@
       h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
       section { padding: 12px 14px; border-bottom: 1px solid var(--line); }
       .row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+      .rule-card { padding: 4px 0 8px; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+      .list-actions { padding-left: 21px; flex-wrap: wrap; }
+      #list-status { white-space: normal; overflow-wrap: anywhere; }
       .row .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       a { color: var(--accent); text-decoration: none; }
       .muted { color: var(--muted); font-size: 12px; }
@@ -43,6 +46,8 @@
         <h2>Region Rules</h2>
         <div id="rules"></div>
         <button id="new-rule">+ New rule</button>
+        <p class="muted">CSV columns: handle,country,region. Imported accounts are blocked as they appear, regardless of region. Reload open X pages after importing.</p>
+        <p id="list-status" class="muted" role="status" aria-live="polite"></p>
       </section>
       <section>
         <h2>Block Log</h2>

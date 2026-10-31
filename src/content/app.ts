@@ -224,7 +224,7 @@ export function startApp(opts: AppOptions): App {
       collapse(handle, await blockLabel(handle));
       return;
     }
-    if (info) await evaluate(handle, info);
+    await evaluate(handle, info);
   }
 
   function paintBadge(badge: HTMLElement, info: RegionInfo) {
@@ -253,21 +253,22 @@ export function startApp(opts: AppOptions): App {
     }
   }
 
-  async function evaluate(handle: string, info: RegionInfo) {
+  async function evaluate(handle: string, info?: RegionInfo) {
     const key = handleKey(handle);
     if (evaluating.has(key)) return;
-    const rule = matchingRule(await settings.rules(), info.basedIn);
-    if (!rule) return;
     evaluating.add(key);
     try {
+      const rule = matchingRule(await settings.rules(), info?.basedIn ?? null, handle);
+      if (!rule) return;
       const exempt = await settings.exemptReason(handle);
       if (await settings.paused()) return highlight(handle, `Matches ${rule.name} rule; paused`);
-      if (!info.accurate) return highlight(handle, `Matches ${rule.name} rule; not blocked because region may be inaccurate`);
+      const listed = rule.accounts?.some((a) => handleKey(a.handle) === key);
+      if (!listed && !info?.accurate) return highlight(handle, `Matches ${rule.name} rule; not blocked because region may be inaccurate`);
       if (exempt === "never-block") return highlight(handle, `Matches ${rule.name} rule; marked Never block`);
       if (exempt === "unblocked") return highlight(handle, `Matches ${rule.name} rule; you unblocked this account`);
       if (!following.has(key)) following.set(key, await gateway.isFollowing(handle));
       if (following.get(key)) return highlight(handle, `Matches ${rule.name} rule; you follow this account`);
-      await block(handle, { kind: "rule", ruleId: rule.id, ruleName: rule.name, basedIn: info.basedIn! });
+      await block(handle, { kind: "rule", ruleId: rule.id, ruleName: rule.name, basedIn: info?.basedIn ?? "" });
     } finally {
       evaluating.delete(key);
     }

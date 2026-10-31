@@ -19,6 +19,26 @@ The region rules are fully configurable. Point it at whoever is currently ruinin
 
 Terms are defined in [GLOSSARY.md](GLOSSARY.md).
 
+## Export and import a rule's account list
+
+Each rule in the extension popup has **Export CSV** and **Import CSV** buttons.
+
+- **Export CSV** downloads that rule's imported accounts plus accounts it successfully blocked that you have not unblocked. Accounts blocked by hand or by another rule are excluded. Imported accounts remain in the exported list even if you later unblock them; your local unblock exemption still protects them.
+- **Import CSV** merges accounts into the selected rule. Handles are matched without regard to case; duplicate handles update their country and region fields. Importing does not immediately block anyone. Reload open X pages after importing: listed accounts are blocked when they appear, while the rule is enabled and rules are not paused. Accounts you follow, marked Never block, or previously unblocked through the extension remain protected.
+- **Clear list** removes the imported accounts from a rule. Existing X blocks, the Block Log, and the rule's country selections stay unchanged. Reload open X pages afterward.
+
+Use these CSV columns (country and region may be blank):
+
+```csv
+handle,country,region
+example_account,United States,United States
+another_account,,South Asia
+```
+
+`region` contains X's reported **Account based in** value, which may be a country or a broad region. `country` is the recognized country name when available. Known X lookup results take precedence on export; otherwise saved list or log metadata is used. Imported location fields are unverified metadata and never replace X's lookup cache. A listed handle matches the rule regardless of its location, including an unknown or inaccurate region.
+
+Files must be smaller than 5 MB and contain at most 10,000 account rows. Handles may start with `@`. To prevent spreadsheet formulas from running, potentially executable location cells are exported with a leading apostrophe.
+
 ## Is it secure?
 
 You can ask ChatGPT or another reputable AI assistant to review it before you install. Paste the [repository URL](https://github.com/jeetdelete/XjeetBlocker), upload the source files, or provide the exact release files you plan to install, then copy this prompt:

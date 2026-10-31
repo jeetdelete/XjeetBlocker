@@ -354,3 +354,59 @@ describe("Region cache from earlier versions", () => {
     expect(await store.get("regions", null)).toBeNull();
   });
 });
+
+describe("Imported rule accounts", () => {
+  async function loadList(enabled = true) {
+    await settings.saveRules([{
+      id: "list", name: "My list", enabled, countries: [], broadRegions: [],
+      accounts: ["sam", "ghost", "friend", "vpn", "priya"].map((handle) => ({
+        handle: handle.toUpperCase(), country: "Unverified CSV country", region: "Unverified CSV region",
+      })),
+    }]);
+  }
+
+  it("blocks listed accounts as they appear, even with a different or unknown region", async () => {
+    await loadList();
+    expect(x.blocked.size).toBe(0);
+    show(post("sam") + post("ghost") + post("sam"));
+    await start();
+    expect([...x.blocked].sort()).toEqual(["ghost", "sam"]);
+    expect(await settings.log()).toMatchObject([
+      { reason: { kind: "rule", ruleId: "list", ruleName: "My list" } },
+      { reason: { kind: "rule", ruleId: "list", ruleName: "My list" } },
+    ]);
+    expect((await settings.region("sam"))?.basedIn).toBe("United States");
+    expect((await settings.region("ghost"))?.basedIn).toBeNull();
+  });
+
+  it("honors followed accounts, Never block and previous unblocks", async () => {
+    await loadList();
+    await settings.setExempt("sam", "never-block");
+    await settings.setExempt("priya", "unblocked");
+    show(post("sam") + post("priya") + post("friend"));
+    await start();
+    expect(x.blocked.size).toBe(0);
+  });
+
+  it("does not use an imported location claim to block accounts missing from the list", async () => {
+    await loadList();
+    show(post("ravi"));
+    await start();
+    expect(x.blocked.size).toBe(0);
+  });
+
+  it("honors Pause for imported accounts", async () => {
+    await loadList();
+    await settings.setPaused(true);
+    show(post("sam"));
+    await start();
+    expect(x.blocked.size).toBe(0);
+  });
+
+  it("honors disabled rules for imported accounts", async () => {
+    await loadList(false);
+    show(post("sam"));
+    await start();
+    expect(x.blocked.size).toBe(0);
+  });
+});
