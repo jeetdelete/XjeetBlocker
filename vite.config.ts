@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) =>
         build: {
           emptyOutDir: false,
           lib: {
-            entry: resolve(__dirname, "src/content/main.ts"),
+            entry: resolve(import.meta.dirname, "src/content/main.ts"),
             formats: ["iife"],
             name: "XRegionBlocker",
             fileName: () => "content.js",
@@ -19,9 +19,9 @@ export default defineConfig(({ mode }) =>
       }
     : {
         root: "src/popup",
-        publicDir: resolve(__dirname, "public"),
+        publicDir: resolve(import.meta.dirname, "public"),
         base: "./",
-        build: { outDir: resolve(__dirname, "dist"), emptyOutDir: true },
-        test: { root: __dirname, environment: "jsdom", globals: true },
+        build: { outDir: resolve(import.meta.dirname, "dist"), emptyOutDir: true },
+        test: { root: import.meta.dirname, environment: "jsdom", globals: true },
       },
 );

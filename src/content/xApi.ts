@@ -20,13 +20,24 @@ export function xApi(doc: Document): XGateway {
     ...extra,
   });
 
+  const validateHandle = (handle: string) => {
+    if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) throw new Error("Invalid X account handle.");
+  };
+
   async function findAboutQueryId(): Promise<string> {
     const sources = [...doc.querySelectorAll<HTMLScriptElement>("script[src]")]
       .map((s) => s.src)
-      .filter((src) => src.includes("abs.twimg.com"));
+      .filter((src) => {
+        try {
+          const url = new URL(src);
+          return url.origin === "https://abs.twimg.com" && !url.username && !url.password;
+        } catch { return false; }
+      });
     for (const src of sources) {
       try {
-        const m = ABOUT_QUERY_PATTERN.exec(await (await fetch(src)).text());
+        const response = await fetch(src, { credentials: "omit", redirect: "error", referrerPolicy: "no-referrer" });
+        if (!response.ok) continue;
+        const m = ABOUT_QUERY_PATTERN.exec(await response.text());
         if (m) return m[1];
       } catch {
         // Try the next script.
@@ -45,23 +56,29 @@ export function xApi(doc: Document): XGateway {
     return fetch(`https://x.com/i/api/graphql/${queryId}/AboutAccountQuery?variables=${variables}`, {
       headers: headers(),
       credentials: "include",
+      redirect: "error",
     });
   }
 
   async function post(path: string, handle: string) {
+    validateHandle(handle);
     const res = await fetch(`https://x.com/i/api/1.1/${path}`, {
       method: "POST",
       headers: headers({ "content-type": "application/x-www-form-urlencoded" }),
       credentials: "include",
+      redirect: "error",
       body: new URLSearchParams({ screen_name: handle }),
     });
+    if (res.status === 429) throw new RateLimitedError(rateLimitReset(res));
     if (!res.ok) return false;
     const body = await res.json().catch(() => null);
-    return !!body && typeof body === "object" && "screen_name" in body;
+    return typeof body?.screen_name === "string" && body.screen_name.toLowerCase() === handle.toLowerCase() &&
+      body.blocking === (path === "blocks/create.json");
   }
 
   return {
     async lookupRegion(handle): Promise<LookupResult> {
+      validateHandle(handle);
       aboutQueryId ??= findAboutQueryId();
       let res = await lookupOnce(handle, await aboutQueryId);
       if (res.status === 400 || res.status === 404) {
@@ -73,23 +90,26 @@ export function xApi(doc: Document): XGateway {
       if (!res.ok) throw new Error(`AboutAccountQuery ${res.status}`);
       const json = await res.json();
       const about = json?.data?.user_result_by_screen_name?.result?.about_profile ?? {};
-      const accurateFlag = about.location_accurate ?? about.created_country_accurate;
       const remaining = res.headers.get("x-rate-limit-remaining");
       return {
         basedIn: typeof about.account_based_in === "string" && about.account_based_in ? about.account_based_in : null,
-        accurate: accurateFlag !== false,
+        accurate: about.location_accurate !== false && about.created_country_accurate !== false,
         remaining: remaining === null ? undefined : Number(remaining),
         resetAt: rateLimitReset(res),
       };
     },
 
     async isFollowing(handle) {
+      validateHandle(handle);
       const res = await fetch(
         `https://x.com/i/api/1.1/friendships/show.json?target_screen_name=${encodeURIComponent(handle)}`,
-        { headers: headers(), credentials: "include" },
+        { headers: headers(), credentials: "include", redirect: "error" },
       );
+      if (res.status === 429) throw new RateLimitedError(rateLimitReset(res));
       if (!res.ok) throw new Error(`friendships/show ${res.status}`);
-      return !!(await res.json())?.relationship?.source?.following;
+      const following = (await res.json())?.relationship?.source?.following;
+      if (typeof following !== "boolean") throw new Error("X did not confirm whether you follow this account.");
+      return following;
     },
 
     block: (handle) => post("blocks/create.json", handle),

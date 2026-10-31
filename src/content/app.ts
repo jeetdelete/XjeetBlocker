@@ -1,6 +1,7 @@
 import { countryFromBasedIn, flagOf } from "../core/countries";
-import type { LookupResult, XGateway } from "../core/gateway";
+import { RateLimitedError, type LookupResult, type XGateway } from "../core/gateway";
 import { LookupQueue } from "../core/lookupQueue";
+import { MutationQueue } from "../core/mutationQueue";
 import {
   handleKey,
   matchingRule,
@@ -19,6 +20,7 @@ export interface AppOptions {
   /** Whether an element is on screen. Defaults to a viewport check. */
   isVisible?: (el: Element) => boolean;
   lookupSpacingMs?: number;
+  mutationSpacingMs?: number;
 }
 
 export interface App {
@@ -67,7 +69,7 @@ export function startApp(opts: AppOptions): App {
   const settings = new Settings(opts.store);
   // Cache reads wait until regions from older versions are moved, so none are looked up again.
   const ready = settings.migrateRegions().catch((err) => console.warn("[X Region Blocker]", err));
-  const following = new Map<string, boolean>();
+  const mutations = new MutationQueue(opts.mutationSpacingMs);
   const evaluating = new Set<string>();
   const work = new Set<Promise<unknown>>();
 
@@ -266,8 +268,6 @@ export function startApp(opts: AppOptions): App {
       if (!listed && !info?.accurate) return highlight(handle, `Matches ${rule.name} rule; not blocked because region may be inaccurate`);
       if (exempt === "never-block") return highlight(handle, `Matches ${rule.name} rule; marked Never block`);
       if (exempt === "unblocked") return highlight(handle, `Matches ${rule.name} rule; you unblocked this account`);
-      if (!following.has(key)) following.set(key, await gateway.isFollowing(handle));
-      if (following.get(key)) return highlight(handle, `Matches ${rule.name} rule; you follow this account`);
       await block(handle, { kind: "rule", ruleId: rule.id, ruleName: rule.name, basedIn: info?.basedIn ?? "" });
     } finally {
       evaluating.delete(key);
@@ -275,21 +275,46 @@ export function startApp(opts: AppOptions): App {
   }
 
   async function block(handle: string, reason: BlockReason) {
-    if (!(await gateway.block(handle))) {
-      console.warn("[X Region Blocker] X did not confirm the block of", handle);
-      return false;
-    }
-    await settings.addLog({ handle, at: now(), reason });
-    collapse(handle, labelFor(handle, reason));
-    return true;
+    if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) return false;
+    return mutations.run(async () => {
+      try {
+        if (reason.kind === "rule") {
+          // Recheck after waiting: Pause, exemptions or rules may have changed in the popup.
+          const info = await settings.region(handle);
+          const rule = matchingRule(await settings.rules(), info?.basedIn ?? null, handle);
+          if (!rule || rule.id !== reason.ruleId || await settings.paused() ||
+              await settings.exemptReason(handle) || await settings.isBlocked(handle)) return false;
+          if (!rule.accounts?.some((a) => handleKey(a.handle) === handleKey(handle)) && !info?.accurate) return false;
+          // Do not cache this across attempts: the user may have followed the account since the last check.
+          if (await gateway.isFollowing(handle)) {
+            highlight(handle, `Matches ${rule.name} rule; you follow this account`);
+            return false;
+          }
+        }
+        if (!(await gateway.block(handle))) {
+          console.warn("[X Region Blocker] X did not confirm the block of", handle);
+          if (reason.kind === "rule") await settings.setPaused(true);
+          return false;
+        }
+        await settings.addLog({ handle, at: now(), reason });
+        collapse(handle, labelFor(handle, reason));
+        return true;
+      } catch (error) {
+        if (reason.kind === "rule" || error instanceof RateLimitedError) await settings.setPaused(true);
+        throw error;
+      }
+    });
   }
 
   async function unblock(handle: string) {
-    if (!(await gateway.unblock(handle))) return false;
-    await settings.markUnblocked(handle);
-    await settings.setExempt(handle, "unblocked");
-    uncollapse(handle);
-    return true;
+    if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) return false;
+    return mutations.run(async () => {
+      if (!(await gateway.unblock(handle))) return false;
+      await settings.setExempt(handle, "unblocked");
+      await settings.markUnblocked(handle);
+      uncollapse(handle);
+      return true;
+    });
   }
 
   async function handBlock(handle: string) {

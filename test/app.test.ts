@@ -23,6 +23,7 @@ async function start() {
     now: () => clock,
     isVisible: (el) => visible(el),
     lookupSpacingMs: 100,
+    mutationSpacingMs: 0,
   });
   await settle();
 }
@@ -39,7 +40,7 @@ const badge = (handle: string) =>
 const articleOf = (handle: string) =>
   document.querySelector<HTMLElement>(`article[data-xrb-author="${handle}"]`)!;
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.useFakeTimers();
   document.head.innerHTML = "";
   x = new FakeX({
@@ -52,6 +53,7 @@ beforeEach(() => {
   });
   store = memoryStore();
   settings = new Settings(store);
+  await settings.setPaused(false);
   visible = () => true;
 });
 
@@ -408,5 +410,35 @@ describe("Imported rule accounts", () => {
     show(post("sam"));
     await start();
     expect(x.blocked.size).toBe(0);
+  });
+});
+
+describe("automatic account safety", () => {
+  it("starts paused until the user explicitly enables automatic blocking", async () => {
+    store = memoryStore();
+    settings = new Settings(store);
+    show(post("priya"));
+    await start();
+    expect(await settings.paused()).toBe(true);
+    expect(x.blocked.size).toBe(0);
+  });
+
+  it("pauses rules on an unconfirmed block and cancels other queued automatic blocks", async () => {
+    x.confirmBlocks = false;
+    const block = vi.spyOn(x, "block");
+    x.accounts.another = { basedIn: "India" };
+    show(post("priya") + post("another"));
+    await start();
+    expect(block).toHaveBeenCalledTimes(1);
+    expect(await settings.paused()).toBe(true);
+    expect(await settings.log()).toEqual([]);
+  });
+
+  it("pauses rather than blocking when following status cannot be checked", async () => {
+    vi.spyOn(x, "isFollowing").mockRejectedValue(new Error("Unverified following status"));
+    show(post("priya"));
+    await start();
+    expect(x.blocked.size).toBe(0);
+    expect(await settings.paused()).toBe(true);
   });
 });

@@ -41,6 +41,10 @@ There is no extension-imposed file-size or account-count limit on CSV imports. H
 
 ## Is it secure?
 
+Read the [security review and fixes](SECURITY_REVIEW.md) for the findings, permissions, data handling, release verification, and remaining limitations. Use **v0.1.1 or later** for the fixes described there.
+
+Automatic rules start paused unless you have previously saved a preference. Review them before unpausing. Account changes are serialized with a 1.5-second gap per X tab; automatic rules pause on an unconfirmed block, a failed safety check, or an API error. This does not guarantee that X will accept the automation. Use one X tab at a time when enabling automatic rules.
+
 You can ask ChatGPT or another reputable AI assistant to review it before you install. Paste the [repository URL](https://github.com/jeetdelete/XjeetBlocker), upload the source files, or provide the exact release files you plan to install, then copy this prompt:
 
 ```text
@@ -102,3 +106,5 @@ cd XjeetBlocker
 npm install
 npm run build
 ```
+
+Development requires Node.js 22.12+ in the 22.x line, 24.x, or 26+. For a reproducible install without dependency lifecycle scripts, use `npm ci --ignore-scripts`, then `npm test`, `npm run typecheck`, and `npm run build`. Load the resulting `dist` folder in Chrome.

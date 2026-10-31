@@ -104,6 +104,7 @@ async function render() {
     ...rules.map((rule) => {
       const toggle = el("input", { type: "checkbox", checked: rule.enabled, title: "Rule on/off" });
       toggle.onchange = async () => {
+        rule.enabled = toggle.checked;
         const latest = await settings.rules();
         const current = latest.find((r) => r.id === rule.id);
         if (current) current.enabled = toggle.checked;
@@ -252,7 +253,10 @@ async function openEditor(existing?: RegionRule) {
     rule.broadRegions = [...broadChosen];
     const rules = await settings.rules();
     const i = rules.findIndex((r) => r.id === rule.id);
-    if (i !== -1) rule.accounts = rules[i].accounts;
+    if (i !== -1) {
+      rule.accounts = rules[i].accounts;
+      rule.enabled = rules[i].enabled;
+    }
     i === -1 ? rules.push(rule) : (rules[i] = rule);
     await settings.saveRules(rules);
     closeEditor();

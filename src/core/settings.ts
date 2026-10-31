@@ -70,7 +70,7 @@ export class Settings {
   }
 
   paused() {
-    return this.store.get<boolean>("paused", false);
+    return this.store.get<boolean>("paused", true);
   }
   setPaused(paused: boolean) {
     return this.store.set("paused", paused);
@@ -100,31 +100,44 @@ export class Settings {
     await this.store.remove("regions");
   }
 
-  exempt() {
-    return this.store.get<Record<string, ExemptReason>>("exempt", {});
+  async exempt() {
+    const legacy = await this.store.get<Record<string, ExemptReason>>("exempt", {});
+    const all = new Map(Object.entries(legacy));
+    const current = await this.store.entries<ExemptReason | null>("exempt:");
+    for (const [key, value] of Object.entries(current)) {
+      const handle = key.slice("exempt:".length);
+      if (value) all.set(handle, value);
+      else all.delete(handle);
+    }
+    return Object.fromEntries(all);
   }
   async exemptReason(handle: string) {
-    return (await this.exempt())[handleKey(handle)];
+    const all = await this.exempt();
+    const key = handleKey(handle);
+    return Object.hasOwn(all, key) ? all[key] : undefined;
   }
   async setExempt(handle: string, reason: ExemptReason | null) {
-    const all = await this.exempt();
-    if (reason) all[handleKey(handle)] = reason;
-    else delete all[handleKey(handle)];
-    await this.store.set("exempt", all);
+    // One key per account avoids lost exemptions from concurrent writes in other tabs.
+    await this.store.set("exempt:" + handleKey(handle), reason);
   }
 
-  log() {
-    return this.store.get<BlockLogEntry[]>("log", []);
+  private async logEntries() {
+    const legacy = await this.store.get<BlockLogEntry[]>("log", []);
+    const current = await this.store.entries<BlockLogEntry>("log:");
+    // Stable legacy keys let newer undone flags override old records without destructive migration.
+    return { ...Object.fromEntries(legacy.map((entry, i) => [`log:legacy:${i}`, entry])), ...current };
+  }
+  async log() {
+    return Object.values(await this.logEntries()).sort((a, b) => a.at - b.at);
   }
   async addLog(entry: BlockLogEntry) {
-    const log = await this.log();
-    log.push(entry);
-    await this.store.set("log", log);
+    await this.store.set("log:" + crypto.randomUUID(), entry);
   }
   async markUnblocked(handle: string) {
-    const log = await this.log();
-    for (const e of log) if (handleKey(e.handle) === handleKey(handle)) e.undone = true;
-    await this.store.set("log", log);
+    const log = await this.logEntries();
+    await Promise.all(Object.entries(log)
+      .filter(([, entry]) => handleKey(entry.handle) === handleKey(handle))
+      .map(([key, entry]) => this.store.set(key, { ...entry, undone: true })));
   }
   async isBlocked(handle: string) {
     return (await this.log()).some((e) => !e.undone && handleKey(e.handle) === handleKey(handle));
@@ -170,7 +183,7 @@ export function chromeStore(): KeyValueStore {
   return {
     async get(key, fallback) {
       const got = await chrome.storage.local.get(key);
-      return key in got ? (got[key] as typeof fallback) : fallback;
+      return Object.hasOwn(got, key) ? (got[key] as typeof fallback) : fallback;
     },
     async set(key, value) {
       await chrome.storage.local.set({ [key]: value });

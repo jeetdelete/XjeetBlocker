@@ -41,6 +41,19 @@ function selectCsv(text: string) {
 }
 
 describe("popup rule lists", () => {
+  it("keeps a disabled rule disabled when its name is edited after toggling it off", async () => {
+    const toggle = document.querySelector<HTMLInputElement>('.rule-card input[type="checkbox"]')!;
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change"));
+    await vi.waitFor(async () => expect((await settings.rules())[0].enabled).toBe(false));
+    button("Edit").click();
+    await vi.waitFor(() => expect(document.getElementById("editor")!.hidden).toBe(false));
+    document.querySelector<HTMLInputElement>("#rule-name")!.value = "Renamed rule";
+    button("Save").click();
+    await vi.waitFor(async () => expect((await settings.rules())[0].name).toBe("Renamed rule"));
+    expect((await settings.rules())[0].enabled).toBe(false);
+  });
+
   it("imports into the selected rule, preserves countries, merges handles and can clear the list", async () => {
     selectCsv("handle,country,region\n@SAM,United States,United States\n");
     await vi.waitFor(() => expect(document.getElementById("list-status")!.textContent).toContain("Loaded 1 accounts"));

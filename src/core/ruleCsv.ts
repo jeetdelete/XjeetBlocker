@@ -72,7 +72,7 @@ export function exportRuleCsv(rule: RegionRule, log: BlockLogEntry[], regions: R
     return `"${safe.replace(/"/g, '""')}"`;
   };
   const rows = [...accounts].sort(([a], [b]) => a.localeCompare(b)).map(([handle, account]) => {
-    const info = regions[handle];
+    const info = Object.hasOwn(regions, handle) ? regions[handle] : undefined;
     const region = info ? info.basedIn ?? "" : account.region;
     const country = info ? countryFromBasedIn(region)?.name ?? "" : account.country;
     return [handle, country, region].map(cell).join(",");
