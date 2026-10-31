@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>X Region Blocker</title>
+    <style>
+      :root { --bg: #fff; --fg: #0f1419; --muted: #536471; --line: #eff3f4; --accent: #1d9bf0; --danger: #f4212e; }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #000; --fg: #e7e9ea; --muted: #71767b; --line: #2f3336; }
+      }
+      body { margin: 0; width: 380px; max-height: 580px; background: var(--bg); color: var(--fg);
+        font: 13px system-ui, -apple-system, sans-serif; }
+      header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px;
+        border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); }
+      h1 { font-size: 15px; margin: 0; }
+      h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
+      section { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+      .row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+      .row .grow { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      a { color: var(--accent); text-decoration: none; }
+      .muted { color: var(--muted); font-size: 12px; }
+      button { font: inherit; border: 1px solid var(--line); background: none; color: var(--fg); border-radius: 999px;
+        padding: 3px 10px; cursor: pointer; }
+      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      button.danger { color: var(--danger); }
+      input[type="text"] { font: inherit; width: 100%; box-sizing: border-box; padding: 6px 8px; border-radius: 6px;
+        border: 1px solid var(--line); background: none; color: var(--fg); }
+      details { border-top: 1px solid var(--line); padding: 4px 0; }
+      summary { cursor: pointer; padding: 3px 0; }
+      .countries { columns: 2; padding: 4px 0 4px 20px; }
+      .countries label { display: block; break-inside: avoid; }
+      .paused { color: var(--danger); font-weight: 600; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>X Region Blocker</h1>
+      <label class="row"><input type="checkbox" id="pause" /> <span id="pause-label">Pause rules</span></label>
+    </header>
+    <div id="main">
+      <section>
+        <h2>Region Rules</h2>
+        <div id="rules"></div>
+        <button id="new-rule">+ New rule</button>
+      </section>
+      <section>
+        <h2>Block Log</h2>
+        <div id="log"></div>
+        <p class="muted" id="tab-note" hidden>Open x.com in a tab to unblock from here.</p>
+      </section>
+      <section>
+        <h2>Never block</h2>
+        <div id="spared"></div>
+      </section>
+    </div>
+    <div id="editor" hidden>
+      <section>
+        <h2 id="editor-title">Edit rule</h2>
+        <input type="text" id="rule-name" placeholder="Rule name" />
+      </section>
+      <section>
+        <h2>Countries</h2>
+        <div id="continents"></div>
+      </section>
+      <section>
+        <h2>Broad Regions</h2>
+        <p class="muted">Some accounts show only a region, like "South Asia". Tick one to block every account showing it.</p>
+        <div id="broad"></div>
+      </section>
+      <section class="row">
+        <button class="primary" id="save-rule">Save</button>
+        <button id="cancel-rule">Cancel</button>
+      </section>
+    </div>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>
