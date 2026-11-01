@@ -64,6 +64,10 @@ An AI review can miss problems. It is a second opinion, not a security audit or 
 
 ## Install (Noob-Friendly Version)
 
+### Android and iPhone
+
+Use the [mobile installation guide](MOBILE.md). The [latest release](https://github.com/jeetdelete/XjeetBlocker/releases/latest) includes **XjeetBlocker.user.js** and **XjeetBlocker-mobile.zip** for Android's Firefox with Tampermonkey and iPhone/iPad's Safari with Userscripts. A touch-friendly XjeetBlocker button opens settings on x.com. The mobile build is experimental and has not been tested on physical phones or against live X APIs. It works in the browser, not inside the native X app or mobile Chrome.
+
 ### Option 1: From a Release (Easiest – Recommended for most people)
 
 #### Windows
@@ -108,3 +112,5 @@ npm run build
 ```
 
 Development requires Node.js 22.12+ in the 22.x line, 24.x, or 26+. For a reproducible install without dependency lifecycle scripts, use `npm ci --ignore-scripts`, then `npm test`, `npm run typecheck`, and `npm run build`. Load the resulting `dist` folder in Chrome.
+
+The build also generates the mobile userscript in `dist-mobile/`. Run `npm run release:package` (requires Python 3) to build, smoke-test, and package both desktop and mobile downloads, installation instructions, and checksums under `release/v<version>/`.

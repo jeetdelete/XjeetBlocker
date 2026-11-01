@@ -1,10 +1,47 @@
 import { resolve } from "node:path";
+import { readFileSync } from "node:fs";
 import { defineConfig } from "vitest/config";
 
-// Two builds: the popup as a normal page, and the content script as a single
-// IIFE file, because Chrome content scripts cannot load ES module chunks.
+const version = JSON.parse(readFileSync(resolve(import.meta.dirname, "package.json"), "utf8")).version;
+const mobileHeader = `// ==UserScript==
+// @name         XjeetBlocker
+// @namespace    https://github.com/jeetdelete/XjeetBlocker
+// @version      ${version}
+// @description  Region badges, account blocking, rules and CSV lists for X on mobile browsers.
+// @match        https://x.com/*
+// @run-at       document-idle
+// @inject-into  content
+// @noframes
+// @grant        GM.getValue
+// @grant        GM.setValue
+// @grant        GM.deleteValue
+// @grant        GM.listValues
+// ==/UserScript==`;
+
+// Shared code builds as a desktop extension and as a standalone mobile userscript.
 export default defineConfig(({ mode }) =>
-  mode === "content"
+  mode === "mobile"
+    ? {
+        publicDir: false,
+        plugins: [{
+          name: "userscript-metadata",
+          generateBundle(_options, bundle) {
+            const script = bundle["XjeetBlocker.user.js"];
+            if (script?.type === "chunk") script.code = `${mobileHeader}\n${script.code}`;
+          },
+        }],
+        build: {
+          outDir: "dist-mobile",
+          target: "es2022",
+          lib: {
+            entry: resolve(import.meta.dirname, "src/mobile/main.ts"),
+            formats: ["iife"],
+            name: "XjeetBlockerMobile",
+            fileName: () => "XjeetBlocker.user.js",
+          },
+        },
+      }
+    : mode === "content"
     ? {
         publicDir: false,
         build: {

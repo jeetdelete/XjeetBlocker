@@ -22,4 +22,12 @@ export const STYLES = `
 .xrb-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 99999;
   background: #1d9bf0; color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 14px; }
 .xrb-toast button { color: #fff; text-decoration: underline; }
+@media (pointer: coarse) {
+  .xrb-actions { gap: 4px; }
+  .xrb-actions button, .xrb-blocked-line button, .xrb-toast button {
+    min-width: 44px; min-height: 44px; opacity: 1; touch-action: manipulation;
+  }
+  .xrb-badge { font-size: 12px; padding: 0 4px; }
+  .xrb-toast { max-width: calc(100vw - 48px); box-sizing: border-box; }
+}
 `;

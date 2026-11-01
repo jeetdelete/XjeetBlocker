@@ -2,13 +2,14 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>X Region Blocker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>XjeetBlocker</title>
     <style>
       :root { --bg: #fff; --fg: #0f1419; --muted: #536471; --line: #eff3f4; --accent: #1d9bf0; --danger: #f4212e; }
       @media (prefers-color-scheme: dark) {
         :root { --bg: #000; --fg: #e7e9ea; --muted: #71767b; --line: #2f3336; }
       }
-      body { margin: 0; width: 380px; max-height: 580px; background: var(--bg); color: var(--fg);
+      body { margin: 0; width: min(380px, 100vw); max-height: 580px; background: var(--bg); color: var(--fg);
         font: 13px system-ui, -apple-system, sans-serif; }
       header { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px;
         border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); }
@@ -38,7 +39,7 @@
   </head>
   <body>
     <header>
-      <h1>X Region Blocker</h1>
+      <h1>XjeetBlocker</h1>
       <label class="row"><input type="checkbox" id="pause" /> <span id="pause-label">Pause rules</span></label>
     </header>
     <div id="main">
@@ -53,7 +54,7 @@
       <section>
         <h2>Block Log</h2>
         <div id="log"></div>
-        <p class="muted" id="tab-note" hidden>Open x.com in a tab to unblock from here.</p>
+        <p class="muted" id="tab-note" hidden>Could not unblock every account. Keep a signed-in x.com tab open and try again.</p>
       </section>
       <section>
         <h2>Never block</h2>

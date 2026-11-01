@@ -1,12 +1,27 @@
 {
   "manifest_version": 3,
-  "name": "X JEET DELETE",
-  "version": "0.1.1",
+  "name": "XjeetBlocker",
+  "version": "0.2.0",
   "description": "Shows where X accounts are based and blocks accounts by hand or by region.",
-  "permissions": ["storage", "unlimitedStorage"],
-  "host_permissions": ["https://x.com/*"],
-  "action": { "default_popup": "index.html" },
+  "permissions": [
+    "storage",
+    "unlimitedStorage"
+  ],
+  "host_permissions": [
+    "https://x.com/*"
+  ],
+  "action": {
+    "default_popup": "index.html"
+  },
   "content_scripts": [
-    { "matches": ["https://x.com/*"], "js": ["content.js"], "run_at": "document_idle" }
+    {
+      "matches": [
+        "https://x.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
   ]
 }
